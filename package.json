@@ -1,0 +1,25 @@
+{
+  "name": "theater-web-application-be",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Advanced-Web-Applications/Theater-Web-Application-BE#readme",
+  "bugs": {
+    "url": "https://github.com/Advanced-Web-Applications/Theater-Web-Application-BE/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Advanced-Web-Applications/Theater-Web-Application-BE.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}
