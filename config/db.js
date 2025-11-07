@@ -9,7 +9,7 @@ const db = new Pool({
   port: parseInt(process.env.DB_PORT) || 5432,
   ssl: {
     // Required for Azure PostgreSQL
-    rejectUnauthorized: true
+    rejectUnauthorized: false
   },
 });
 
