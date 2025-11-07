@@ -13,4 +13,4 @@ router.post('/owner/staff', async (req, res) => {
 
 })
 
-export default router
+module.exports = router

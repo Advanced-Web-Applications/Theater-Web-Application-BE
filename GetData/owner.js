@@ -13,4 +13,4 @@ router.get('/owner/monthly-report', async (req, res) => {
 
 })
 
-export default router
+module.exports = router

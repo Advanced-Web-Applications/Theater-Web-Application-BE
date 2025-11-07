@@ -14,4 +14,4 @@ router.post('/staff/bookings', async (req, res) => {
 
 
 
-export default router
+module.exports = router
