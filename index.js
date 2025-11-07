@@ -1,12 +1,13 @@
 const express = require('express')
 const cors = require('cors')
 const { connectDB } = require('./config/db')
-import ownerGetRoutes from './GetData/owner'
-import staffGetRoutes from './GetData/staff'
-import customerGetRoutes from './GetData/customer'
-import ownerPostRoutes from './PostData/owner'
-import staffPostRoutes from './PostData/staff'
-import customerPostRoutes from './PostData/customer'
+
+const ownerGetRoutes = require('./GetData/owner') 
+const staffGetRoutes = require('./GetData/staff') 
+const customerGetRoutes = require('./GetData/customer') 
+const ownerPostRoutes = require('./PostData/owner') 
+const staffPostRoutes = require('./PostData/staff') 
+const customerPostRoutes = require('./PostData/customer') 
 
 const app = express()
 
@@ -20,6 +21,14 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+app.use('/api/owner', ownerGetRoutes)
+app.use('/api/staff', staffGetRoutes)
+app.use('/api/customer', customerGetRoutes)
+app.use('/api/owner', ownerPostRoutes)
+app.use('/api/staff', staffPostRoutes)
+app.use('/api/customer', customerPostRoutes)
+
+const PORT = process.env.PORT || 5000
 app.listen(process.env.PORT, () => {
   console.log(`Listening on port ${process.env.PORT}`)
 })
