@@ -29,7 +29,7 @@ app.use('/api/customer', customerGetRoutes)
 // app.use('/api/staff', staffPostRoutes)
 // app.use('/api/customer', customerPostRoutes)
 
-app.use('/api', auth)
+// app.use('/api', auth)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
