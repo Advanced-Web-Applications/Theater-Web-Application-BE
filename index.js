@@ -4,7 +4,7 @@ const { connectDB } = require('./config/db')
 
 // const ownerGetRoutes = require('./GetData/owner') 
 // const staffGetRoutes = require('./GetData/staff') 
-// const customerGetRoutes = require('./GetData/customer') 
+const customerGetRoutes = require('./GetData/customer') 
 // const ownerPostRoutes = require('./PostData/owner') 
 // const staffPostRoutes = require('./PostData/staff') 
 // const customerPostRoutes = require('./PostData/customer') 
@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
 
 // app.use('/api/owner', ownerGetRoutes)
 // app.use('/api/staff', staffGetRoutes)
-// app.use('/api/customer', customerGetRoutes)
+app.use('/api/customer', customerGetRoutes)
 // app.use('/api/owner', ownerPostRoutes)
 // app.use('/api/staff', staffPostRoutes)
 // app.use('/api/customer', customerPostRoutes)
