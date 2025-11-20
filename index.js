@@ -7,7 +7,7 @@ const { connectDB } = require('./config/db')
 const customerGetRoutes = require('./GetData/customer') 
 // const ownerPostRoutes = require('./PostData/owner') 
 // const staffPostRoutes = require('./PostData/staff') 
-// const customerPostRoutes = require('./PostData/customer') 
+const customerPostRoutes = require('./PostData/customer') 
 const auth = require('./Authentication/auth')
 
 const app = express()
@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 app.use('/api/customer', customerGetRoutes)
 // app.use('/api/owner', ownerPostRoutes)
 // app.use('/api/staff', staffPostRoutes)
-// app.use('/api/customer', customerPostRoutes)
+app.use('/api/customer', customerPostRoutes)
 
 // app.use('/api', auth)
 
