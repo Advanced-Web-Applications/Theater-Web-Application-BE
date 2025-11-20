@@ -16,10 +16,17 @@ router.get('/locations', async (req, res) => {
     }
 })
 
-router.get('/movies', async (req, res) => {
+router.get('/location/movies', async (req, res) => {
     try {
+        const city = req.query.city
         const movies = await db.query(
-            'SELECT id, title, genre, duration, age_rating, description, poster_url FROM movies'
+            `SELECT m.id, m.title, m.genre, m.duration, m.age_rating, m.description, m.poster_url
+             FROM theaters t
+             JOIN auditoriums a ON t.id = a.theater_id
+             JOIN showtimes s ON a.id = s.auditorium_id
+             JOIN movies m ON s.movie_id = m.id
+             WHERE t.city = $1
+             GROUP BY m.id`, [city]
         )
         res.json(movies.rows)
     } catch (err) {
