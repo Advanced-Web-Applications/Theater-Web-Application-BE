@@ -95,7 +95,7 @@ router.get('/seats/showtimes/:id', async (req, res) => {
     try {
         const { id } = req.params
         const seats = await db.query(
-            `SELECT a.total_seats, a.seats_per_row
+            `SELECT a.total_seats, a.seats_per_row, s.auditorium_id
              FROM auditoriums a
              JOIN showtimes s ON a.id = s.auditorium_id
              WHERE s.id = $1`, [id]
@@ -107,10 +107,41 @@ router.get('/seats/showtimes/:id', async (req, res) => {
     }
 })
 
+// Show unavailable seats
+router.get ('/seats/showtimes/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params
+        const unavailable = await db.query(
+            `SELECT s.status, s.seat_number
+             FROM seats s
+             JOIN auditoriums a ON a.id = s.auditorium_id
+             JOIN showtimes sh ON sh.id = s.showtime_id
+             WHERE sh.id = $1`, [id]
+        )
+        res.json(unavailable.rows)
+    } catch (err) {
+        console.log('Error getting unavailable seats ', err)
+        res.status(500).json({ err: 'Cannot get unavailable seats' })
+    }
+})
+
+// Get ticket price
+router.get ('/seats/price', async (req, res) => {
+    try {
+        const price = await db.query(
+            'SELECT * FROM price'
+        )
+        res.json(price.rows[0])
+    } catch (err) {
+        console.log('Error getting ticket price ', err)
+        res.status(500).json({ err: 'Cannot get ticket price' })
+    }
+})
+
+
 // Get checkout session's status
 router.get('/session-status', async (req, res) => {
     const { session_id } = req.query;
-
     try {
         const session = await stripe.checkout.sessions.retrieve(session_id);
         res.json({
@@ -127,5 +158,23 @@ router.get('/session-status', async (req, res) => {
     }
 });
 
+// This endpoint retrieves the status of a checkout session, this is used after redirect to the return_url
+router.get('/session-status', async (req, res) => {
+    const { session_id } = req.query; // Get session_id from query parameters
+
+    try {
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+        res.json({
+            id: session.id,
+            payment_status: session.payment_status,
+            amount_total: session.amount_total,
+            currency: session.currency,
+            customer_email: session.customer_email
+        });
+    } catch (error) {
+        console.error('Error retrieving session:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
 
 module.exports = router
