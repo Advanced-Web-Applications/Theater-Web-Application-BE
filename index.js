@@ -8,6 +8,7 @@ const customerGetRoutes = require('./GetData/customer')
 const ownerPostRoutes = require('./PostData/owner') 
 const staffPostRoutes = require('./PostData/staff') 
 const customerPostRoutes = require('./PostData/customer') 
+const staffEditRoutes = require('./EditData/staff')
 
 const app = express()
 
@@ -27,8 +28,9 @@ app.use('/api/customer', customerGetRoutes)
 app.use('/api/owner', ownerPostRoutes)
 app.use('/api/staff', staffPostRoutes)
 app.use('/api/customer', customerPostRoutes)
+app.use('/api/staff', staffEditRoutes)
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`)
 })
