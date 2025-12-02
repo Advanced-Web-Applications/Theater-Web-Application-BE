@@ -1,9 +1,12 @@
 const express = require('express')
 const { db } = require('../config/db')
 const Stripe = require('stripe');
+const sendEmail = require('../email');
+const bwipjs = require('bwip-js')
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-03-31.basil',
 });
+
 
 const router = express.Router()
 
@@ -114,9 +117,8 @@ router.get ('/seats/showtimes/:id/status', async (req, res) => {
         const unavailable = await db.query(
             `SELECT s.status, s.seat_number
              FROM seats s
-             JOIN auditoriums a ON a.id = s.auditorium_id
-             JOIN showtimes sh ON sh.id = s.showtime_id
-             WHERE sh.id = $1`, [id]
+             WHERE s.showtime_id = $1
+             AND s.status = 'booked'`, [id]
         )
         res.json(unavailable.rows)
     } catch (err) {
@@ -138,29 +140,28 @@ router.get ('/seats/price', async (req, res) => {
     }
 })
 
-
 // Get checkout session's status
 router.get('/session-status', async (req, res) => {
     const { session_id } = req.query;
-    try {
-        const session = await stripe.checkout.sessions.retrieve(session_id);
-        res.json({
-            id: session.id,
-            payment_status: session.payment_status,
-            amount_total: session.amount_total,
-            currency: session.currency,
-            customer_email: session.customer_email
-        });
-        console.log(session)
-    } catch (error) {
-        console.error('Error retrieving session:', error);
-        res.status(400).json({ error: error.message });
+
+    async function generateBarcode(text) {
+        return new Promise((resolve, reject) => {
+            bwipjs.toBuffer({
+                bcid: 'code128',
+                text: text,
+                scale: 2,
+                height: 60,
+                includetext: false,
+            }, function (err, png) {
+                if (err) {
+                    reject(err)
+                } else {
+                    const base64 = png.toString('base64')
+                    resolve(base64)
+                }
+            })
+        })
     }
-});
-
-// This endpoint retrieves the status of a checkout session, this is used after redirect to the return_url
-router.get('/session-status', async (req, res) => {
-    const { session_id } = req.query; // Get session_id from query parameters
 
     try {
         const session = await stripe.checkout.sessions.retrieve(session_id);
@@ -171,6 +172,29 @@ router.get('/session-status', async (req, res) => {
             currency: session.currency,
             customer_email: session.customer_email
         });
+
+        const barcodeBase64 = await generateBarcode(session_id)
+
+        await sendEmail({
+            to: session.customer_email,
+            subject: 'Your ticket has arrived',
+            html: `
+                <h3>Movie name</h3>
+                <p><strong>Theater:</strong></p>
+                <p><strong>Auditorium:</strong></p>
+                <p><strong>Date:</strong></p>
+                <p><strong>Seats:</strong></p>
+                <img src="cid:barcodeImage" />
+            `,
+            attachments: [
+                {
+                    filename: 'barcode.png',
+                    content: Buffer.from(barcodeBase64, 'base64'),
+                    cid: 'barcodeImage'
+                }
+            ]
+        })
+        
     } catch (error) {
         console.error('Error retrieving session:', error);
         res.status(400).json({ error: error.message });

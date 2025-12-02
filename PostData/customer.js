@@ -7,7 +7,14 @@ const router = express.Router()
 
 // Book tickets
 router.post('/booking', async (req, res) => {
-    const { showtime_id, auditorium_id, seat_numbers, status } = req.body
+    const { showtime_id, seat_numbers, status, email } = req.body
+
+    const showtimeResult = await db.query(
+        `SELECT auditorium_id
+         FROM showtimes WHERE id = $1`, [showtime_id]
+    )
+    const auditorium_id = showtimeResult.rows[0].auditorium_id
+
     const client = await db.connect()
     
     try {
@@ -16,18 +23,19 @@ router.post('/booking', async (req, res) => {
         const insertedSeats = []
         for (let seat of seat_numbers) {
             const result = await client.query(
-                `INSERT INTO seats (showtime_id, auditorium_id, seat_number, status)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING *`, [showtime_id, auditorium_id, seat, status]
+                `INSERT INTO seats (showtime_id, auditorium_id, seat_number, status, customer_email)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING *`, [showtime_id, auditorium_id, seat, status, email]
             )
             insertedSeats.push(result.rows[0])
         }
         await client.query('COMMIT')
+
         res.json(insertedSeats)
     } catch (err) {
         await client.query('ROLLBACK')
-        console.log('Error to send seats: ', err)
-        res.status(500).json({ err: 'Cannot send seats' })
+        console.error('Error to send seats: ', err)
+        res.status(500).json({ err: 'Cannot book seats' })
     } finally {
         client.release()
     }
@@ -35,32 +43,51 @@ router.post('/booking', async (req, res) => {
 
 // Create checkout session
 router.post('/create-checkout-session', async (req, res) => {
-    try {
-        const tickets = {
-            price_data: {
-                currency: 'EUR',
-                product_data: {
-                    name: 'Adult ticket',
-                },
-                unit_amount: 2000,
-            },
-            quantity: 1,
-        };
+    const { email, adult_ticket, child_ticket } = req.body
+    console.log(email)
 
-        console.log('Creating checkout session for item:', tickets);
+    try {
+        const price = await db.query('SELECT * FROM price')
+        const { adult_price, child_price } = (price.rows[0])
+        
+        const line_items = []
+        
+        if (adult_ticket > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'EUR',
+                    product_data: {
+                        name: 'Adult ticket'
+                    },
+                    unit_amount: adult_price * 100,
+                },
+                quantity: adult_ticket,
+            }) 
+        }
+        
+        if (child_ticket > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'EUR',
+                    product_data: {
+                        name: 'Child ticket'
+                    },
+                    unit_amount: child_price * 100
+                },
+                quantity: child_ticket
+            })
+        }
+        
         const session = await stripe.checkout.sessions.create({
-            line_items: [
-                tickets,
-            ],
+            line_items,
             mode: 'payment',
             ui_mode: 'custom',
-            customer_email: 'test@example.com', 
+            customer_email: email, 
             return_url: 'http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}'
         });
-
-        console.log('Created checkout session:', session);
-
-        res.json({client_secret: session.client_secret});
+                    
+        console.log(line_items)
+        res.json({client_secret: session.client_secret, line_items, session});
     } catch (error) {
         console.error('Error creating checkout session:', error);
         res.status(400).json({ error: error.message });
