@@ -30,7 +30,6 @@ router.post('/booking', async (req, res) => {
             insertedSeats.push(result.rows[0])
         }
         await client.query('COMMIT')
-
         res.json(insertedSeats)
     } catch (err) {
         await client.query('ROLLBACK')

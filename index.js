@@ -5,13 +5,10 @@ const { connectDB } = require('./config/db')
 const ownerGetRoutes = require('./GetData/owner') 
 const staffGetRoutes = require('./GetData/staff') 
 const customerGetRoutes = require('./GetData/customer') 
-// const ownerPostRoutes = require('./PostData/owner') 
-// const staffPostRoutes = require('./PostData/staff') 
-const auth = require('./Authentication/auth')
 const ownerPostRoutes = require('./PostData/owner') 
 const staffPostRoutes = require('./PostData/staff') 
 const customerPostRoutes = require('./PostData/customer') 
-// const auth = require('./Authentication/auth')
+const staffEditRoutes = require('./EditData/staff')
 
 const app = express()
 
@@ -28,13 +25,10 @@ app.get('/', (req, res) => {
 app.use('/api/owner', ownerGetRoutes)
 app.use('/api/staff', staffGetRoutes)
 app.use('/api/customer', customerGetRoutes)
-// app.use('/api/owner', ownerPostRoutes)
-// app.use('/api/staff', staffPostRoutes)
 app.use('/api/owner', ownerPostRoutes)
 app.use('/api/staff', staffPostRoutes)
 app.use('/api/customer', customerPostRoutes)
-
-// app.use('/api', auth)
+app.use('/api/staff', staffEditRoutes)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
