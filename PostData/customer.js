@@ -85,8 +85,13 @@ router.post('/create-checkout-session', async (req, res) => {
             customer_email: email, 
             return_url: 'http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}'
         });
+
+        await db.query(
+            `INSERT INTO payments (adult_tickets, child_tickets, payment_id)
+             VALUES ($1, $2, $3)`, [adult_ticket, child_ticket, session.id]
+        )
                     
-        console.log(line_items)
+        console.log(session)
         res.json({client_secret: session.client_secret, line_items, session});
     } catch (error) {
         console.error('Error creating checkout session:', error);

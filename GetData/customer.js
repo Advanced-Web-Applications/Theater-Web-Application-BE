@@ -165,35 +165,45 @@ router.get('/session-status', async (req, res) => {
 
     try {
         const session = await stripe.checkout.sessions.retrieve(session_id);
-        res.json({
-            id: session.id,
-            payment_status: session.payment_status,
-            amount_total: session.amount_total,
-            currency: session.currency,
-            customer_email: session.customer_email
-        });
-
-        const barcodeBase64 = await generateBarcode(session_id)
-
-        await sendEmail({
-            to: session.customer_email,
-            subject: 'Your ticket has arrived',
-            html: `
+        
+        if (session.payment_status === 'paid') {
+            const barcodeBase64 = await generateBarcode(session_id)
+            
+            await sendEmail({
+                to: session.customer_email,
+                subject: 'Your ticket has arrived',
+                html: `
                 <h3>Movie name</h3>
                 <p><strong>Theater:</strong></p>
                 <p><strong>Auditorium:</strong></p>
                 <p><strong>Date:</strong></p>
                 <p><strong>Seats:</strong></p>
                 <img src="cid:barcodeImage" />
-            `,
-            attachments: [
-                {
-                    filename: 'barcode.png',
-                    content: Buffer.from(barcodeBase64, 'base64'),
-                    cid: 'barcodeImage'
-                }
-            ]
-        })
+                `,
+                attachments: [
+                    {
+                        filename: 'barcode.png',
+                        content: Buffer.from(barcodeBase64, 'base64'),
+                        cid: 'barcodeImage'
+                    }
+                ]
+            })
+            
+            await db.query(
+                `UPDATE payments
+                 SET payment_status = $1,
+                     barcode = $2
+                 WHERE payment_id = $3`, ['confirmed', barcodeBase64, session.id]
+            )
+
+            res.json({
+                id: session.id,
+                payment_status: session.payment_status,
+                amount_total: session.amount_total,
+                currency: session.currency,
+                customer_email: session.customer_email
+            });
+        }
         
     } catch (error) {
         console.error('Error retrieving session:', error);
