@@ -120,10 +120,5 @@ router.post('/create-checkout-session', async (req, res) => {
     }
 });
 
-// Hold a ticket
-router.post('/seats/hold', async (req, res) => {
-
-})
-
 
 module.exports = router
