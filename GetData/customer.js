@@ -29,10 +29,10 @@ router.get('/location/movies', async (req, res) => {
     try {
         const city = req.query.city
         const movies = await db.query(
-            `SELECT m.id, m.title, m.genre, m.duration, m.age_rating, m.description, m.poster_url 
+            `SELECT m.id, m.title, m.poster_url 
              FROM theaters t
              JOIN auditoriums a ON t.id = a.theater_id
-             JOIN showtimes s ON a.id = s.auditorium_id
+             JOIN showtimes s ON s.auditorium_id = a.id
              JOIN movies m ON s.movie_id = m.id
              WHERE t.city = $1
              GROUP BY m.id`, [city]
@@ -194,16 +194,39 @@ router.get('/session-status', async (req, res) => {
                 `UPDATE payments
                  SET payment_status = $1,
                      barcode = $2
-                 WHERE payment_id = $3`, ['confirmed', barcodeBase64, session.id]
+                 WHERE payment_id = $3`, ['confirmed', barcodeBase64, session_id]
             )
 
-            res.json({
-                id: session.id,
-                payment_status: session.payment_status,
-                amount_total: session.amount_total,
-                currency: session.currency,
-                customer_email: session.customer_email
-            });
+            const payment = await db.query(
+                `SELECT showtime_id FROM payments WHERE payment_id = $1`, [session_id]
+            )
+            const showtime_id = payment.rows[0].showtime_id
+
+            await db.query(
+                `UPDATE seats
+                 SET status = 'booked',
+                     payment_id = $1
+                 WHERE customer_email = $2
+                    AND status = 'reserved'
+                    AND showtime_id = $3
+                 RETURNING seat_number`, [session_id, session.customer_email, showtime_id]
+            )
+
+            const ticket = await db.query(
+                `SELECT p.showtime_id, m.title, m.duration, sh.start_time, sh.auditorium_id, array_agg(DISTINCT s.seat_number ORDER BY s.seat_number) AS seats, a.name AS auditorium, t.name AS theater
+                 FROM payments p
+                 JOIN showtimes sh ON p.showtime_id = sh.id
+                 JOIN movies m ON sh.movie_id = m.id
+                 JOIN auditoriums a ON sh.auditorium_id = a.id
+                 JOIN theaters t ON a.theater_id = t.id
+                 JOIN seats s ON sh.id = s.showtime_id AND s.payment_id = $1
+                 WHERE p.payment_id = $1
+                 GROUP BY p.showtime_id, m.title, m.duration, sh.start_time, sh.auditorium_id, a.name, t.name;`, [session_id]
+            )
+
+            console.log(session_id)
+            console.log(ticket.rows[0])
+            res.json(ticket.rows[0]);
         }
         
     } catch (error) {
