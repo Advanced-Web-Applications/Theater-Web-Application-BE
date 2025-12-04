@@ -3,9 +3,7 @@ const { db } = require('../config/db')
 const Stripe = require('stripe');
 const sendEmail = require('../email');
 const bwipjs = require('bwip-js')
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-03-31.basil',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const router = express.Router()
 
