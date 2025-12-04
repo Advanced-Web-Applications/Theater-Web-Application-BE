@@ -62,4 +62,7 @@ jobs:
           app-name: 'theater-booking'
           slot-name: 'Production'
           package: .
+        env: 
+          VITE_API_URL: ${{ secrets.VITE_API_KEY }}
+
           
