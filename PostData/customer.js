@@ -89,7 +89,7 @@ router.post('/create-checkout-session', async (req, res) => {
             mode: 'payment',
             ui_mode: 'custom',
             customer_email: email, 
-            return_url: 'http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}'
+            return_url: `${process.env.VITE_API_KEY}/success?session_id={CHECKOUT_SESSION_ID}`
         });
 
         await db.query(
