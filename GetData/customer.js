@@ -7,8 +7,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-03-31.basil',
 });
 
-
-
 const router = express.Router()
 
 // Get locations
@@ -195,30 +193,37 @@ router.get('/session-status', async (req, res) => {
             
             const ticket = await db.query(
                 `SELECT p.showtime_id, m.title, m.duration, sh.start_time, sh.auditorium_id, array_agg(DISTINCT s.seat_number ORDER BY s.seat_number) AS seats, a.name AS auditorium, t.name AS theater, p.barcode
-                FROM payments p
-                JOIN showtimes sh ON p.showtime_id = sh.id
-                JOIN movies m ON sh.movie_id = m.id
-                JOIN auditoriums a ON sh.auditorium_id = a.id
-                JOIN theaters t ON a.theater_id = t.id
-                JOIN seats s ON sh.id = s.showtime_id AND s.payment_id = $1
-                WHERE p.payment_id = $1
-                GROUP BY p.showtime_id, m.title, m.duration, sh.start_time, sh.auditorium_id, a.name, t.name, p.barcode`, [session_id]
+                 FROM payments p
+                 JOIN showtimes sh ON p.showtime_id = sh.id
+                 JOIN movies m ON sh.movie_id = m.id
+                 JOIN auditoriums a ON sh.auditorium_id = a.id
+                 JOIN theaters t ON a.theater_id = t.id
+                 JOIN seats s ON sh.id = s.showtime_id AND s.payment_id = $1
+                 WHERE p.payment_id = $1
+                 GROUP BY p.showtime_id, m.title, m.duration, sh.start_time, sh.auditorium_id, a.name, t.name, p.barcode`, [session_id]
             )
 
             const ticketInfo = ticket.rows[0]
-            
+            const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
             
             await sendEmail({
                 to: session.customer_email,
                 subject: 'Your ticket has arrived',
                 html: `
-                <h3>Movie name: ${ticketInfo.title}</h3>
-                <p><strong>Theater: </strong> ${ticketInfo.theater}</p>
-                <p><strong>Auditorium: </strong>${ticketInfo.auditorium}</p>
-                <p><strong>Date: </strong> ${new Date(ticketInfo.start_time).toLocaleString()}</p>
-                <p><strong>Seats: </strong> ${ticketInfo.seats.join(', ')}</p>
-                <img src="cid:barcodeImage" width="300" height="60" />
-                `,
+                    <h3>${ticketInfo.title}</h3>
+                    <p><strong>Theater: </strong> ${ticketInfo.theater}</p>
+                    <p><strong>Auditorium: </strong>${ticketInfo.auditorium}</p>
+                    <p><strong>Date: </strong> ${formattedDateTime}</p>
+                    <p><strong>Seats: </strong> ${ticketInfo.seats.join(', ')}</p>
+                    <img src="cid:barcodeImage" width="300" height="60" />
+                    `,
                 attachments: [
                     {
                         filename: 'barcode.png',
