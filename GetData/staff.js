@@ -1,10 +1,5 @@
 const express = require('express')
 const { db } = require('../config/db');
-
-db.query('SELECT * FROM theaters')
-  .then(result => console.log(result.rows))
-  .catch(err => console.error(err));
-
 const router = express.Router()
 
 router.get('/theaters', async (req, res) => {
