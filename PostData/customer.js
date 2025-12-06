@@ -87,7 +87,7 @@ router.post('/create-checkout-session', async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             line_items,
             mode: 'payment',
-            ui_mode: 'custom',
+            ui_mode: 'embedded',
             customer_email: email, 
             return_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`
         });
