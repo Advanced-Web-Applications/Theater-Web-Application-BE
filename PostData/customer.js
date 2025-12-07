@@ -5,41 +5,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const router = express.Router()
 
-// Book tickets
-// router.post('/booking', async (req, res) => {
-//     const { showtime_id, seat_numbers, status, email } = req.body
-
-//     const showtimeResult = await db.query(
-//         `SELECT auditorium_id
-//          FROM showtimes WHERE id = $1`, [showtime_id]
-//     )
-//     const auditorium_id = showtimeResult.rows[0].auditorium_id
-
-//     const client = await db.connect()
-    
-//     try {
-//         await client.query('BEGIN')
-
-//         const insertedSeats = []
-//         for (let seat of seat_numbers) {
-//             const result = await client.query(
-//                 `INSERT INTO seats (showtime_id, auditorium_id, seat_number, status, customer_email)
-//                  VALUES ($1, $2, $3, $4, $5)
-//                  RETURNING *`, [showtime_id, auditorium_id, seat, status, email]
-//             )
-//             insertedSeats.push(result.rows[0])
-//         }
-//         await client.query('COMMIT')
-//         res.json(insertedSeats)
-//     } catch (err) {
-//         await client.query('ROLLBACK')
-//         console.error('Error to send seats: ', err)
-//         res.status(500).json({ err: 'Cannot book seats' })
-//     } finally {
-//         client.release()
-//     }
-// })
-
 // Create checkout session
 router.post('/create-checkout-session', async (req, res) => {
     const { email, adult_ticket, child_ticket, showtime_id, seat_numbers, status } = req.body
@@ -83,7 +48,7 @@ router.post('/create-checkout-session', async (req, res) => {
                 quantity: child_ticket
             })
         }
-        
+
         const session = await stripe.checkout.sessions.create({
             line_items,
             mode: 'payment',
