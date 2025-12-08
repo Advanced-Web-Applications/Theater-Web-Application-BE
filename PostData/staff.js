@@ -7,7 +7,6 @@ const router = express.Router()
 router.post("/showtimes", async (req, res) => {
   const { movie_id, auditorium_id, start_time } = req.body;
 
-
   try {
     const movieDuration = await db.query(
       "SELECT duration FROM movies WHERE id = $1",
@@ -15,25 +14,37 @@ router.post("/showtimes", async (req, res) => {
     );
 
     if (movieDuration.rows.length === 0){
-      return res.status(400).json({message: "This movie not start and end time"});
+      return res.status(400).json({message: "Movie not found"});
     }
 
-    const duration = movieDuration.rows[0].duration; //this part is for minute
+    const duration = movieDuration.rows[0].duration;
 
-    const start = new Date(start_time);
+    // 🔥 关键修改：转换输入时间为巴黎时间对应的 UTC
+    const timeConversion = await db.query(
+        `SELECT ($1::timestamp AT TIME ZONE 'Europe/Paris') as utc_time`, 
+        [start_time]
+    );
+    const start = new Date(timeConversion.rows[0].utc_time);
+
+    // Calculate end times using the correct UTC start
     const end = new Date(start.getTime() + duration * 60000);
     const end_with_clean_time = new Date(end.getTime() + 30 * 60000);
 
+    // Check overlaps (Using the corrected 'start' object)
     const overlap = await db.query(
-      `SELECT * FROM showtimes
-      WHERE auditorium_id = $1
-      AND(
-        start_time BETWEEN $2 AND $3
-        OR (
-        start_time + (SELECT duration * INTERVAL '1 Minute' FROM movies 
-        WHERE movies.id = showtimes.movie_id)) 
-        BETWEEN $2 AND $3)`,[auditorium_id, start, end_with_clean_time]
-    )
+      `SELECT s.id
+       FROM showtimes s
+       JOIN movies m ON s.movie_id = m.id
+       WHERE s.auditorium_id = $1
+       AND (
+         s.start_time BETWEEN $2 AND $3
+         OR
+         (s.start_time + (m.duration * INTERVAL '1 minute') + INTERVAL '30 minutes') BETWEEN $2 AND $3
+         OR
+         (s.start_time <= $2 AND (s.start_time + (m.duration * INTERVAL '1 minute') + INTERVAL '30 minutes') >= $3)
+       )`,
+      [auditorium_id, start, end_with_clean_time]
+    );
 
     if(overlap.rows.length > 0){
       return res.status(409).json({
@@ -41,11 +52,12 @@ router.post("/showtimes", async (req, res) => {
       });
     }
 
+    // Insert the CORRECTED start time (UTC)
     const result = await db.query(
       `INSERT INTO showtimes (movie_id, auditorium_id, start_time)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [movie_id, auditorium_id, start_time]
+      [movie_id, auditorium_id, start]
     );
 
     res.status(201).json(result.rows[0]); 

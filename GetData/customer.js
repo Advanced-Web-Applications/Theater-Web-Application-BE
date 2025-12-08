@@ -120,7 +120,7 @@ router.get ('/seats/showtimes/:id/status', async (req, res) => {
             `SELECT s.status, s.seat_number
              FROM seats s
              WHERE s.showtime_id = $1
-             AND s.status = 'booked'`, [id]
+             AND (s.status = 'booked' OR s.status = 'maintenance')`, [id]
         )
         res.json(unavailable.rows)
     } catch (err) {
@@ -207,13 +207,15 @@ router.get('/session-status', async (req, res) => {
             )
 
             const ticketInfo = ticket.rows[0]
+            const theaterTimezone = 'Europe/Paris';
             const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: theaterTimezone
             });
             
             await sendEmail({
