@@ -25,15 +25,22 @@ router.post("/showtimes", async (req, res) => {
     const end_with_clean_time = new Date(end.getTime() + 30 * 60000);
 
     const overlap = await db.query(
-      `SELECT * FROM showtimes
-      WHERE auditorium_id = $1
-      AND(
-        start_time BETWEEN $2 AND $3
-        OR (
-        start_time + (SELECT duration * INTERVAL '1 Minute' FROM movies 
-        WHERE movies.id = showtimes.movie_id)) 
-        BETWEEN $2 AND $3)`,[auditorium_id, start, end_with_clean_time]
-    )
+      `SELECT 
+        s.*,
+        m.title,
+        m.duration
+      FROM showtimes s
+      JOIN movies m ON s.movie_id = m.id
+      WHERE s.auditorium_id = $1
+      AND (
+        s.start_time BETWEEN $2 AND $3
+        OR
+        (s.start_time + (m.duration * INTERVAL '1 minute') + INTERVAL '30 minutes') BETWEEN $2 AND $3
+        OR
+        (s.start_time <= $2 AND (s.start_time + (m.duration * INTERVAL '1 minute') + INTERVAL '30 minutes') >= $3)
+      )`,
+      [auditorium_id, start, end_with_clean_time]
+    );
 
     if(overlap.rows.length > 0){
       return res.status(409).json({
