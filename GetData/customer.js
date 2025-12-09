@@ -207,13 +207,15 @@ router.get('/session-status', async (req, res) => {
             )
 
             const ticketInfo = ticket.rows[0]
+            const theaterTimezone= 'Europe/paris'
             const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: theaterTimezone
             });
             
             await sendEmail({
