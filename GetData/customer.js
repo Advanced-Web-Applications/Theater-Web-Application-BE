@@ -3,9 +3,7 @@ const { db } = require('../config/db')
 const Stripe = require('stripe');
 const sendEmail = require('../email');
 const bwipjs = require('bwip-js')
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-03-31.basil',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const router = express.Router()
 
@@ -60,11 +58,16 @@ router.get('/movies/:id', async (req, res) => {
 router.get('/showtimes/:id', async (req, res) => {
     try {
         const { id } = req.params
+        const { city } = req.query
+
         const showtimes = await db.query(
-            `SELECT s.start_time, s.id
+            `SELECT s.start_time, s.id, t.name AS theater_name, a.name AS auditorium_name
              FROM showtimes s
              JOIN movies m ON s.movie_id = m.id
-             WHERE s.movie_id = $1`, [id]
+             JOIN auditoriums a ON s.auditorium_id = a.id
+             JOIN theaters t ON a.theater_id = t.id
+             WHERE s.movie_id = $1 AND t.city = $2
+             ORDER BY t.name, s.start_time`, [id, city]
         )
         res.json(showtimes.rows)
     } catch (err) {
@@ -117,7 +120,7 @@ router.get ('/seats/showtimes/:id/status', async (req, res) => {
             `SELECT s.status, s.seat_number
              FROM seats s
              WHERE s.showtime_id = $1
-             AND s.status = 'booked'`, [id]
+             AND (s.status = 'booked' OR s.status = 'maintenance')`, [id]
         )
         res.json(unavailable.rows)
     } catch (err) {
@@ -204,13 +207,15 @@ router.get('/session-status', async (req, res) => {
             )
 
             const ticketInfo = ticket.rows[0]
+            const theaterTimezone = 'Europe/Paris';
             const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: theaterTimezone
             });
             
             await sendEmail({
@@ -233,7 +238,14 @@ router.get('/session-status', async (req, res) => {
                 ]
             })
 
-            res.json(ticket.rows[0]);
+            res.json({
+                status: session.payment_status, 
+                ticketData: ticket.rows[0]
+            });
+        } else if (session.payment_status === 'unpaid' || session.payment_status === 'canceled') {
+            return res.status(200).json({ status: 'failed', message: 'Payment was unsuccessful or canceled.' });
+        } else {
+            return res.status(200).json({ status: 'pending', message: 'Payment is currently processing.' });
         }
         
     } catch (error) {
