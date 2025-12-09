@@ -63,6 +63,8 @@ jobs:
           slot-name: 'Production'
           package: .
         env: 
-          VITE_API_URL: ${{ secrets.VITE_API_KEY }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
 
           
+
