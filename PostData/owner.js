@@ -134,4 +134,68 @@ router.post('/staff', async (req, res) => {
   }
 })
 
+// Add new movie
+router.post('/movies', async (req, res) => {
+  try {
+    const { title, description, genre, duration, age_rating, rating, poster_url, trailer_url, release_date } = req.body;
+
+    // Validate required fields
+    if (!title || !description || !genre || !duration || !age_rating || !rating || !release_date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, description, genre, duration, age_rating, rating, release_date'
+      });
+    }
+
+    // Validate age_rating
+    const validAgeRatings = ['13+', '16+', '18+'];
+    if (!validAgeRatings.includes(age_rating)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid age rating. Must be one of: 13+, 16+, 18+'
+      });
+    }
+
+    // Validate rating range
+    if (rating < 0 || rating > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 0 and 10'
+      });
+    }
+
+    // Check if movie title already exists
+    const checkQuery = 'SELECT id FROM movies WHERE title = $1';
+    const checkResult = await db.query(checkQuery, [title]);
+
+    if (checkResult.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Movie "${title}" already exists in the database`
+      });
+    }
+
+    const query = `
+      INSERT INTO movies (title, description, genre, duration, age_rating, rating, poster_url, trailer_url, release_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+    const values = [title, description, genre, duration, age_rating, rating, poster_url || null, trailer_url || null, release_date];
+    const result = await db.query(query, values);
+
+    res.status(201).json({
+      success: true,
+      message: 'Movie added successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error adding movie:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding movie',
+      error: error.message
+    });
+  }
+})
+
 module.exports = router
