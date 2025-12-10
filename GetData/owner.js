@@ -187,4 +187,126 @@ router.get('/prices', async (req, res) => {
   }
 })
 
+// Get all movies with search and filter
+router.get('/movies', async (req, res) => {
+  try {
+    const { search, status, genre, sortBy = 'title', order = 'ASC' } = req.query;
+
+    let query = `
+      SELECT
+        id,
+        title,
+        genre,
+        duration,
+        age_rating,
+        description,
+        poster_url,
+        trailer_url,
+        status,
+        created_at
+      FROM movies
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    // Search by title
+    if (search && search.trim()) {
+      query += ` AND LOWER(title) LIKE LOWER($${paramIndex})`;
+      params.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    // Filter by status
+    if (status && status !== 'all') {
+      query += ` AND status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    // Filter by genre
+    if (genre && genre !== 'all') {
+      query += ` AND LOWER(genre) LIKE LOWER($${paramIndex})`;
+      params.push(`%${genre}%`);
+      paramIndex++;
+    }
+
+    // Sorting
+    const validSortColumns = ['title', 'status', 'genre', 'created_at', 'duration'];
+    const validOrders = ['ASC', 'DESC'];
+    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'title';
+    const sortOrder = validOrders.includes(order.toUpperCase()) ? order.toUpperCase() : 'ASC';
+
+    query += ` ORDER BY ${sortColumn} ${sortOrder}`;
+
+    const result = await db.query(query, params);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching movies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching movies',
+      error: error.message
+    });
+  }
+});
+
+// Get unique genres for filter dropdown
+router.get('/movies/genres', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT
+        TRIM(UNNEST(STRING_TO_ARRAY(genre, ','))) AS genre
+      FROM movies
+      WHERE genre IS NOT NULL AND genre != ''
+      ORDER BY genre
+    `;
+    const result = await db.query(query);
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => row.genre)
+    });
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching genres',
+      error: error.message
+    });
+  }
+});
+
+// Get movie statistics by status
+router.get('/movies/stats', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        status,
+        COUNT(*) as count
+      FROM movies
+      GROUP BY status
+      ORDER BY status
+    `;
+    const result = await db.query(query);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching movie stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching movie statistics',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router
