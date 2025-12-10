@@ -201,6 +201,7 @@ router.get('/movies', async (req, res) => {
         age_rating,
         description,
         poster_url,
+        trailer_url,
         status,
         created_at
       FROM movies

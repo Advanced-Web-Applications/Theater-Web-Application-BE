@@ -140,6 +140,77 @@ router.put('/prices', async (req, res) => {
   }
 });
 
+// Update full movie information
+router.put('/movies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, genre, duration, age_rating, description, poster_url, trailer_url, status } = req.body;
+
+    // Validate required fields (trailer_url is optional)
+    if (!title || !genre || !duration || !age_rating || !description || !poster_url || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required (except trailer_url)'
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['upcoming', 'now_showing', 'ended', 'archived'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    // Validate duration
+    if (duration <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duration must be greater than 0'
+      });
+    }
+
+    // Check if movie exists
+    const checkQuery = 'SELECT id FROM movies WHERE id = $1';
+    const checkResult = await db.query(checkQuery, [id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found'
+      });
+    }
+
+    // Update movie
+    const updateQuery = `
+      UPDATE movies
+      SET title = $1, genre = $2, duration = $3, age_rating = $4,
+          description = $5, poster_url = $6, trailer_url = $7, status = $8
+      WHERE id = $9
+      RETURNING id, title, genre, duration, age_rating, description, poster_url, trailer_url, status, created_at
+    `;
+
+    const result = await db.query(updateQuery, [
+      title, genre, duration, age_rating, description, poster_url, trailer_url || null, status, id
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Movie updated successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error updating movie:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating movie',
+      error: error.message
+    });
+  }
+});
+
 // Update movie status (soft delete)
 router.patch('/movies/:id/status', async (req, res) => {
   try {
