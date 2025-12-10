@@ -140,4 +140,58 @@ router.put('/prices', async (req, res) => {
   }
 });
 
+// Update movie status (soft delete)
+router.patch('/movies/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['upcoming', 'now_showing', 'ended', 'archived'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    // Check if movie exists
+    const checkQuery = 'SELECT id, title, status FROM movies WHERE id = $1';
+    const checkResult = await db.query(checkQuery, [id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found'
+      });
+    }
+
+    const oldStatus = checkResult.rows[0].status;
+
+    // Update status
+    const updateQuery = `
+      UPDATE movies
+      SET status = $1
+      WHERE id = $2
+      RETURNING id, title, status
+    `;
+
+    const result = await db.query(updateQuery, [status, id]);
+
+    res.json({
+      success: true,
+      message: `Movie status updated from '${oldStatus}' to '${status}'`,
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error updating movie status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating movie status',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
