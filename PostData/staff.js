@@ -19,7 +19,6 @@ router.post("/showtimes", async (req, res) => {
 
     const duration = movieDuration.rows[0].duration;
 
-    // 🔥 关键修改：转换输入时间为巴黎时间对应的 UTC
     const timeConversion = await db.query(
         `SELECT ($1::timestamp AT TIME ZONE 'Europe/Paris') as utc_time`, 
         [start_time]
