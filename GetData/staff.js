@@ -37,9 +37,10 @@ router.get('/theaters/:id', async (req, res) => {
   }
 });
 
+//add show time (set time)
 router.get('/movies', async(req, res)=>{
     try{
-        const result = await db.query('SELECT * FROM movies ORDER BY id');
+        const result = await db.query("SELECT * FROM movies WHERE status = 'now_showing' ORDER BY id");
         res.json(result.rows);
     }catch (err){
         console.error(err);
@@ -47,7 +48,7 @@ router.get('/movies', async(req, res)=>{
     }
 })
 
-// Show showtimes in a specific auditorium //////////////////////////////////////////////////////
+// Show showtimes in a specific auditorium
 router.get('/showtimes/:auditoriumId', async (req, res) => {
   const { auditoriumId } = req.params;
   try {

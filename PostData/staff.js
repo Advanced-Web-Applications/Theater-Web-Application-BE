@@ -46,8 +46,24 @@ router.post("/showtimes", async (req, res) => {
     );
 
     if(overlap.rows.length > 0){
+      const conflictDetails = await db.query(
+        `SELECT s.id, m.title, s.start_time,
+        s.start_time + (m.duration * INTERVAL '1 minute') + INTERVAL '30 minutes' as end_with_clean
+        FROM showtimes s
+        JOIN movies m ON s.movie_id = m.id
+        WHERE s.id = $1`,
+        [overlap.rows[0].id]
+      );
+      
+      const conflict = conflictDetails.rows[0];
+      const conflictEnd = new Date(conflict.end_with_clean).toLocaleTimeString('fr-FR', { 
+        timeZone: 'Europe/Paris', 
+        hour: '2-digit', 
+        minute:'2-digit' 
+      });
+      
       return res.status(409).json({
-        message: "The time you select conflicts with another movie time"
+        message: `Time conflict with "${conflict.title}" (ends with cleaning at ${conflictEnd})`
       });
     }
 
