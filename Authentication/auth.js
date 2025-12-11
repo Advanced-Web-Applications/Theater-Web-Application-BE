@@ -8,7 +8,7 @@ const router = express.Router()
 // Create an account
 router.post('/auth/register', async (req, res) => {
     try {
-        const { username, email, password, role } = req.body
+        const { username, email, password, role, city } = req.body
 
         const userExists = await db.query(
             'SELECT * FROM users WHERE email = $1', 
@@ -22,17 +22,21 @@ router.post('/auth/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
 
+        const theaterResult = await db.query(
+            'SELECT id FROM theaters WHERE city = $1',
+            [city]
+        )
+        if (theaterResult.rows.length === 0) {
+            return res.status(400).json({ msg: 'Invalid city' })
+        }
+        const theaterId = theaterResult.rows[0].id
+
         let newUser;
         if (!role) {
             const defaultRole = 'customer'
             newUser = await db.query(
-                'INSERT INTO users (username, email, password_hashed, role) VALUES ($1, $2, $3, $4) RETURNING id, username, role', 
-                [username, email, hashedPassword, defaultRole]
-            )
-        } else {
-            newUser = await db.query(
-                'INSERT INTO users (username, email, password_hashed, role) VALUES ($1, $2, $3, $4) RETURNING id, username, role', 
-                [username, email, hashedPassword, role]
+                'INSERT INTO users (username, email, password_hashed, role, theater_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role', 
+                [username, email, hashedPassword, defaultRole, theaterId]
             )
         }
 
@@ -44,7 +48,7 @@ router.post('/auth/register', async (req, res) => {
             }
         }
         const token = jwt.sign(payload, process.env.JWT_SECRET, {expiresIn: '1h'})
-        res.status(201).json({token, role: newUser.rows[0].role})
+        res.status(201).json({token, role: newUser.rows[0].role, city})
     } catch (err) {
         console.log(err.message)
         res.status(500).send('Cannot create account')
@@ -54,31 +58,39 @@ router.post('/auth/register', async (req, res) => {
 // Login
 router.post('/auth/login', async (req, res) => {
     try {
-        const {username, password} = req.body
+        const {email, password} = req.body
 
-        const user = await db.query(
-            'SELECT * FROM users WHERE username = $1',
-            [username]
+        const userResult = await db.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
         )
-        if (user.rows.length === 0) {
+        if (userResult.rows.length === 0) {
             return res.status(400).json({msg: 'User not found'})
         }
 
-        const checkPassword = await bcrypt.compare(password, user.rows[0].password_hashed)
+        const user = userResult.rows[0]
+
+        const checkPassword = await bcrypt.compare(password, user.password_hashed)
         if (!checkPassword) {
             return res.status(400).json({msg: 'Invalid password'})
         }
 
+        const theaterResult = await db.query(
+            'SELECT city FROM theaters WHERE id = $1',
+            [user.theater_id]
+        )
+        const city = theaterResult.rows[0]?.city
+
         const payload = {
             user: {
-                id: user.rows[0].id,
-                username: user.rows[0].username,
-                role: user.rows[0].role
+                id: user.id,
+                email: user.email,
+                role: user.role
             }
         }
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, {expiresIn: '1h'})
-        res.status(201).json({token, role: user.rows[0].role, theater_id: user.rows[0].theater_id})
+        res.status(201).json({token, role: user.role, theater_id: user.theater_id, city})
     } catch (err) {
         console.log(err.message)
         res.status(500).send('Cannot create account')
