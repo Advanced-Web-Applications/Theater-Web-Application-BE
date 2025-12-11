@@ -114,6 +114,45 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+// Verify Token - for Protected Routes
+router.get('/auth/verify', authMiddleware, async (req, res) => {
+  try {
+    // req.user is already set by authMiddleware (contains id, email, role)
+    const userId = req.user.id;
+
+    // Get full user info from database
+    const userResult = await db.query(
+      'SELECT id, email, username, role, theater_id FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Return user info
+    res.status(200).json({
+      success: true,
+      role: user.role,
+      user_id: user.id,
+      email: user.email,
+      username: user.username,
+      theater_id: user.theater_id
+    });
+  } catch (err) {
+    console.error('Verify error:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // Change password
 router.post('/auth/change-password', authMiddleware, async (req, res) => {
   try {
@@ -156,5 +195,5 @@ router.post('/auth/change-password', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 })
-  
-  module.exports = router
+
+module.exports = router
