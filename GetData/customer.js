@@ -45,7 +45,7 @@ router.get('/movies/:id', async (req, res) => {
     try {
         const { id } = req.params
         const details = await db.query(
-            'SELECT id, title, genre, duration, age_rating, description, poster_url FROM movies WHERE id = $1', [id]
+            'SELECT id, title, genre, duration, age_rating, description, poster_url, trailer_url FROM movies WHERE id = $1', [id]
         )
         res.json(details.rows[0])
     } catch (err) {
@@ -120,7 +120,7 @@ router.get ('/seats/showtimes/:id/status', async (req, res) => {
             `SELECT s.status, s.seat_number
              FROM seats s
              WHERE s.showtime_id = $1
-             AND s.status = 'booked'`, [id]
+             AND (s.status = 'booked' OR s.status = 'maintenance')`, [id]
         )
         res.json(unavailable.rows)
     } catch (err) {
@@ -207,7 +207,9 @@ router.get('/session-status', async (req, res) => {
             )
 
             const ticketInfo = ticket.rows[0]
+
             const theaterTimezone= 'Europe/paris'
+
             const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
