@@ -4,6 +4,7 @@ const { connectDB } = require('./config/db')
 const http = require('http')
 const { Server } = require('socket.io')
 
+const auth = require('./Authentication/auth')
 const socketHandlers = require('./sockets')
 const ownerGetRoutes = require('./GetData/owner')
 const staffGetRoutes = require('./GetData/staff')
@@ -44,6 +45,7 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+app.use('/api', auth)
 app.use('/api/owner', ownerGetRoutes)
 app.use('/api/staff', staffGetRoutes)
 app.use('/api/customer', customerGetRoutes)
