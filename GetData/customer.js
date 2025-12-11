@@ -20,6 +20,30 @@ router.get('/locations', async (req, res) => {
     }
 })
 
+// Get theater info by location
+router.get('/locations/:city', async (req, res) => {
+  const { city } = req.params;
+
+  try {
+    const result = await db.query(
+      `SELECT name, address, phone 
+       FROM theaters 
+       WHERE city = $1`,
+      [city]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Location not found' });
+    }
+
+    res.json(result.rows[0]);
+
+  } catch (error) {
+    console.error('Error fetching location:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Show movies for a location
 router.get('/location/movies', async (req, res) => {
     try {
@@ -45,7 +69,7 @@ router.get('/movies/:id', async (req, res) => {
     try {
         const { id } = req.params
         const details = await db.query(
-            'SELECT id, title, genre, duration, age_rating, description, poster_url FROM movies WHERE id = $1', [id]
+            'SELECT id, title, genre, duration, age_rating, description, poster_url, trailer_url FROM movies WHERE id = $1', [id]
         )
         res.json(details.rows[0])
     } catch (err) {
@@ -207,7 +231,9 @@ router.get('/session-status', async (req, res) => {
             )
 
             const ticketInfo = ticket.rows[0]
-            const theaterTimezone = 'Europe/Paris';
+
+            const theaterTimezone= 'Europe/paris'
+
             const formattedDateTime = new Date(ticketInfo.start_time).toLocaleString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',

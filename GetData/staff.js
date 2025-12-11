@@ -48,7 +48,7 @@ router.get('/movies', async(req, res)=>{
     }
 })
 
-// Show showtimes in a specific auditorium 
+// Show showtimes in a specific auditorium
 router.get('/showtimes/:auditoriumId', async (req, res) => {
   const { auditoriumId } = req.params;
   try {
@@ -141,6 +141,5 @@ router.get("/showtimes/:auditorium_id/:date", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
-
 
 module.exports = router
