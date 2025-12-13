@@ -44,23 +44,38 @@ router.get('/locations/:city', async (req, res) => {
   }
 });
 
-// Show movies for a location
+// Show now showing movies for a location
 router.get('/location/movies', async (req, res) => {
     try {
         const city = req.query.city
         const movies = await db.query(
-            `SELECT m.id, m.title, m.poster_url 
+            `SELECT m.id, m.title, m.poster_url, m.genre, m.age_rating, m.duration
              FROM theaters t
              JOIN auditoriums a ON t.id = a.theater_id
              JOIN showtimes s ON s.auditorium_id = a.id
              JOIN movies m ON s.movie_id = m.id
-             WHERE t.city = $1
+             WHERE t.city = $1 AND m.status = 'now_showing'
              GROUP BY m.id`, [city]
         )
         res.json(movies.rows)
     } catch (err) {
         console.log('Error get movies: ', err)
-        res.status(500).json({ err: 'Cannot get movies' })
+        res.status(500).json({ err: 'Cannot now showing get movies' })
+    }
+})
+
+// Show upcoming movies
+router.get('/movies', async (req, res) => {
+    try {
+        const movies = await db.query(
+            `SELECT id, title, poster_url 
+             FROM movies
+             WHERE status = 'upcoming'`
+        )
+        res.json(movies.rows)
+    } catch (err) {
+        console.log('Error get movies: ', err)
+        res.status(500).json({ err: 'Cannot get upcoming movies' })
     }
 })
 

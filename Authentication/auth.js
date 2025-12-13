@@ -8,7 +8,7 @@ const router = express.Router()
 // Create an account
 router.post('/auth/register', async (req, res) => {
     try {
-        const { username, email, password, role, city } = req.body
+        const { username, email, password, city } = req.body
 
         const userExists = await db.query(
             'SELECT * FROM users WHERE email = $1', 
@@ -31,14 +31,10 @@ router.post('/auth/register', async (req, res) => {
         }
         const theaterId = theaterResult.rows[0].id
 
-        let newUser;
-        if (!role) {
-            const defaultRole = 'customer'
-            newUser = await db.query(
-                'INSERT INTO users (username, email, password_hashed, role, theater_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role', 
-                [username, email, hashedPassword, defaultRole, theaterId]
-            )
-        }
+        const newUser = await db.query(
+            'INSERT INTO users (username, email, password_hashed, role, theater_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role', 
+            [username, email, hashedPassword, 'customer', theaterId]
+        )
 
         const payload = {
             user: {
@@ -65,14 +61,14 @@ router.post('/auth/login', async (req, res) => {
             [email]
         )
         if (userResult.rows.length === 0) {
-            return res.status(400).json({msg: 'User not found'})
+            return res.status(400).json({message: 'User not found'})
         }
 
         const user = userResult.rows[0]
 
         const checkPassword = await bcrypt.compare(password, user.password_hashed)
         if (!checkPassword) {
-            return res.status(400).json({msg: 'Invalid password'})
+            return res.status(400).json({message: 'Wrong password'})
         }
 
         const theaterResult = await db.query(
@@ -93,7 +89,7 @@ router.post('/auth/login', async (req, res) => {
         res.status(201).json({token, role: user.role, theater_id: user.theater_id, city})
     } catch (err) {
         console.log(err.message)
-        res.status(500).send('Cannot create account')
+        res.status(500).send('Cannot login')
     }
 })
 

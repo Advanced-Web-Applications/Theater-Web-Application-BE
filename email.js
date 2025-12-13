@@ -6,13 +6,15 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: 'dinhnhatthi0105@gmail.com',
         pass: process.env.EMAIL_API_KEY
-    }
+    },
+    logger: true,
+    debug: true
 })
 
 async function sendEmail(options) {
     try {
         await transporter.sendMail({
-            from: 'theater@gmail.com',
+            from: 'dinhnhatthi0105@gmail.com',
             ...options
         })
         console.log ('Email sent to user')
