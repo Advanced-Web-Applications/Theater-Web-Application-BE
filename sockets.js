@@ -7,12 +7,12 @@ module.exports = function(io) {
         try {
             const result = await db.query(
                 `DELETE FROM reserved_seats
-                 WHERE reserved_at < NOW() - INTERVAL '5 minutes'
+                 WHERE reserved_at < NOW() - INTERVAL '10 minutes'
                  RETURNING seat_number, showtime_id`
             )
     
             result.rows.forEach(row => {
-                io.emit('seatUpdate', {
+                io.to(`showtime_${row.showtime_id}`).emit('seatUpdate', {
                     seatId: [row.seat_number],
                     status: 'available'
                 })
@@ -29,9 +29,16 @@ module.exports = function(io) {
     io.on('connection', (socket) => {
         console.log('Socket connected: ', socket.id)
 
+        // Join a showtime room
+        socket.on('joinShowtime', ({ showtimeId }) => {
+            socket.join(`showtime_${showtimeId}`)
+        })
+
         // Reserve the seats
         socket.on('selectSeat', async ({ seatId, showtimeId }) => {
             try {
+                socket.join(`showtime_${showtimeId}`)
+
                 const result = await db.query(
                     `INSERT INTO reserved_seats (showtime_id, seat_number, socket_id)
                      SELECT $1, unnest($2::text[]), $3
@@ -44,8 +51,8 @@ module.exports = function(io) {
                     return
                 }
 
-                io.emit('seatUpdate', {
-                    seatId, 
+                io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
+                    seatId: result.rows.map(r => r.seat_number),
                     status: 'reserved'
                 })
 
@@ -64,8 +71,8 @@ module.exports = function(io) {
                      AND socket_id = $3`, [seatId, showtimeId, socket.id]
                 )
 
-                io.emit('seatUpdate', {
-                    seatId,
+                io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
+                    seatId: Array.isArray(seatId) ? seatId : [seatId],
                     status: 'available'
                 })
 
@@ -74,7 +81,7 @@ module.exports = function(io) {
             }
         })
 
-        // Change status from reserved to booked
+        // Book seat
         socket.on('bookSeat', async ({ seatId, showtimeId }) => {
             try {
                 const check = await db.query(
@@ -103,8 +110,8 @@ module.exports = function(io) {
                     [seatId, showtimeId]
                 )
 
-                io.emit('seatUpdate', {
-                    seatId,
+                io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
+                    seatId: Array.isArray(seatId) ? seatId : [seatId],
                     status: 'booked'
                 })
 
@@ -119,12 +126,12 @@ module.exports = function(io) {
                 const released = await db.query(
                     `DELETE FROM reserved_seats
                      WHERE socket_id = $1
-                     RETURNING seat_number`, [socket.id]
+                     RETURNING seat_number, showtime_id`, [socket.id]
                 )
 
                 released.rows.forEach(row => {
-                    io.emit('seatUpdate', {
-                        seatId: row.seat_number,
+                    io.to(`showtime_${row.showtime_id}`).emit('seatUpdate', {
+                        seatId: [row.seat_number],
                         status: 'available'
                     })
                 })
