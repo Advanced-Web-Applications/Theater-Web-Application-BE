@@ -41,7 +41,7 @@ module.exports = function(io) {
 
                 const result = await db.query(
                     `INSERT INTO reserved_seats (showtime_id, seat_number, socket_id)
-                     SELECT $1, unnest($2::text[]), $3
+                     SELECT $1, unnest($2::int[]), $3
                      ON CONFLICT DO NOTHING
                      RETURNING seat_number`, [showtimeId, seatId, socket.id]
                 )
