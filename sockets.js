@@ -30,9 +30,27 @@ module.exports = function(io) {
         console.log('Socket connected: ', socket.id)
 
         // Join a showtime room
-        socket.on('joinShowtime', ({ showtimeId }) => {
+        socket.on('joinShowtime', async ({ showtimeId }) => {
             socket.join(`showtime_${showtimeId}`)
+
+            try {
+                const reserved = await db.query(
+                    `SELECT seat_number, socket_id FROM reserved_seats WHERE showtime_id = $1`,
+                    [showtimeId]
+                )
+
+                reserved.rows.forEach(row => {
+                    socket.emit('seatUpdate', {
+                        seatId: [row.seat_number],
+                        status: 'reserved',
+                        socketId: row.socket_id
+                    })
+                })
+            } catch (err) {
+                console.error('Error sending reserved seats on join:', err)
+            }
         })
+
 
         // Reserve the seats
         socket.on('selectSeat', async ({ seatId, showtimeId }) => {
@@ -47,14 +65,37 @@ module.exports = function(io) {
                 )
 
                 if (result.rows.length === 0) {
-                    socket.emit('seatRejected', {seatId})
+                    socket.emit('seatRejected', { seatId })
+
+                    const existing = await db.query(
+                        `SELECT seat_number, socket_id FROM reserved_seats
+                         WHERE seat_number = ANY($1) AND showtime_id = $2`,
+                        [seatId, showtimeId]
+                    )
+
+                    existing.rows.forEach(row => {
+                        io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
+                            seatId: [row.seat_number],
+                            status: 'reserved',
+                            socketId: row.socket_id
+                        })
+                    })
+
+                    const alreadyReservedSeats = existing.rows.map(row => row.seat_number)
+                    if (alreadyReservedSeats.length > 0) {
+                        io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
+                            seatId: alreadyReservedSeats,
+                            status: 'reserved',
+                            socketId: existing.rows[0]?.socket_id || 'unknown' // ensure a socketId is present
+                        })
+                    }
                     return
                 }
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: result.rows.map(r => r.seat_number),
                     status: 'reserved',
-                    socketId: socket.id
+                    socketId: socket.id,
                 })
 
             } catch (err) {
