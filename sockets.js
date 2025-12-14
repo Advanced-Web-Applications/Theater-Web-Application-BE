@@ -14,7 +14,7 @@ module.exports = function(io) {
             result.rows.forEach(row => {
                 io.to(`showtime_${row.showtime_id}`).emit('seatUpdate', {
                     seatId: [row.seat_number],
-                    status: 'available'
+                    status: 'available',
                 })
             })
     
@@ -41,7 +41,7 @@ module.exports = function(io) {
 
                 const result = await db.query(
                     `INSERT INTO reserved_seats (showtime_id, seat_number, socket_id)
-                     SELECT $1, unnest($2::text[]), $3
+                     SELECT $1, unnest($2::int[]), $3
                      ON CONFLICT DO NOTHING
                      RETURNING seat_number`, [showtimeId, seatId, socket.id]
                 )
@@ -53,7 +53,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: result.rows.map(r => r.seat_number),
-                    status: 'reserved'
+                    status: 'reserved',
+                    socketId: socket.id
                 })
 
             } catch (err) {
@@ -73,7 +74,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: Array.isArray(seatId) ? seatId : [seatId],
-                    status: 'available'
+                    status: 'available',
+                    socketId: socket.id
                 })
 
             } catch (err) {
@@ -112,7 +114,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: Array.isArray(seatId) ? seatId : [seatId],
-                    status: 'booked'
+                    status: 'booked',
+                    socketId: socket.id
                 })
 
             } catch (err) {
