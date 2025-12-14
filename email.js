@@ -1,4 +1,6 @@
 require('dotenv').config()
+console.log('EMAIL_API_KEY:', process.env.EMAIL_API_KEY ? 'set' : 'missing');
+
 const nodemailer = require('nodemailer')
 
 const transporter = nodemailer.createTransport({
