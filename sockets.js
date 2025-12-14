@@ -14,7 +14,7 @@ module.exports = function(io) {
             result.rows.forEach(row => {
                 io.to(`showtime_${row.showtime_id}`).emit('seatUpdate', {
                     seatId: [row.seat_number],
-                    status: 'available'
+                    status: 'available',
                 })
             })
     
@@ -53,7 +53,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: result.rows.map(r => r.seat_number),
-                    status: 'reserved'
+                    status: 'reserved',
+                    socketId: socket.id
                 })
 
             } catch (err) {
@@ -73,7 +74,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: Array.isArray(seatId) ? seatId : [seatId],
-                    status: 'available'
+                    status: 'available',
+                    socketId: socket.id
                 })
 
             } catch (err) {
@@ -112,7 +114,8 @@ module.exports = function(io) {
 
                 io.to(`showtime_${showtimeId}`).emit('seatUpdate', {
                     seatId: Array.isArray(seatId) ? seatId : [seatId],
-                    status: 'booked'
+                    status: 'booked',
+                    socketId: socket.id
                 })
 
             } catch (err) {
